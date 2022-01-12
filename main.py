@@ -1,6 +1,6 @@
 import time
 import requests
-from pprint import pprint
+import json
 
 if __name__ == '__main__':
 
@@ -13,8 +13,9 @@ if __name__ == '__main__':
     result = []
     token = get_token('token.txt')
     URL = 'https://api.vk.com/method/photos.get'
+    id = input('Введите id изучаемой учетки Вконтакте (например Павла Дурова - 1): ')
     params = {
-        'owner_id': '1',
+        'owner_id': id.strip(),
         'album_id': 'profile',
         'extended': True,
         'photo_sizes': True,
@@ -22,13 +23,14 @@ if __name__ == '__main__':
         'v': '5.131'
     }
     res = requests.get(URL, params=params)
-    pprint(res.json())
+    print('Отслеживание процесса: Данные от ID получены')
 
     error_test = res.json().get('error') # проверка на приватность
     if error_test != None and error_test.get('error_code') == 30:
         print('Профиль защищен настройками приватности')
 
     else:
+        print('Отслеживание процесса: Профиль не защищен настройками приватности - продолжаю')
         TYPE_TUPLES = ('w', 'z', 'y', 'x', 'r', 'q', 'p', 'o', 'm', 's') # определяем самые качественное фото по типу
         for j in range(len(res.json()['response']['items'])):
             size_max = 10
@@ -45,24 +47,36 @@ if __name__ == '__main__':
                 "likes" : res.json()['response']['items'][j]['likes']['count']
             }
             result.append(dic_res)
-        pprint(result)
+        print(f'Отслеживание процесса: Выбраны {len(result)} фото наилучшего разрешения')
         # Сравним количество лайков для фото и при необходимости добавим дату загрузки
         likes = [] #ищем одинаковое кол-во лайков
         for like in result:
             likes.append(like['likes'])
-        print(likes)
         likes_unique = list(set(likes))
         for like in likes_unique:
             likes.remove(like)
         likes = list(set(likes))
-        print(likes)
+        print('Отслеживание процесса: Количество лайков по каждой фото получено')
         # преобразуем время с начала эпохи в дату и добавляем в одинаковое кол-во лайков
         for file_name in result:
             for like in likes:
                 if like == file_name['likes']:
                     time_name = time.localtime(file_name["date"])
                     file_name['file_name'] = f'{like} {time_name.tm_mday}.{time_name.tm_mon}.{time_name.tm_year}.jpg'
-        pprint(result) #в этом списке все данные для загрузки на Я-Диск
+        #pprint(result) #в этом списке все данные для загрузки на Я-Диск
+        print('Отслеживание процесса: Имена файлов для запист на Я-Диск подготовлены')
+
+        #составляем файл json
+        json_tmp = []
+        for i in result:
+            dic_tmp = {}
+            dic_tmp['file_name'] = i['file_name']
+            dic_tmp['size'] = i['size']
+            json_tmp.append(dic_tmp)
+        file_path = 'filename.json'
+        with open(file_path, 'w') as f:
+            json.dump(json_tmp, f)
+        print('Отслеживание процесса: Файл Json создан')
 
         # далее операции с Я-Диском
         token = get_token('tokenya.txt')
@@ -76,54 +90,25 @@ if __name__ == '__main__':
         params = {'path': dir_name}
 
         response = requests.put(url, headers=headers, params=params, timeout=5)
-        print(response)
+        print('Отслеживание процесса: Папка на Я-Диске создана')
 
         #загружаем файлы на Я-диск
         url = "https://cloud-api.yandex.net/v1/disk/resources/upload"
-        for foto in result:
+        for i, foto in enumerate(result):
             params = {
                 'path': f'/{dir_name}/{foto["file_name"]}',
                 'url': foto['url']
             }
             response = requests.post(url, params=params, headers=headers, timeout=5)
-            print(response)
+            print(f'Отслеживание процесса: загружено {i+1} фото из {len(result)}')
 
-        # далее нужно отредактировать json и загрузить его
-
-
-        #
-        # kaka = [2, 4, 5, 4, 7, 8, 2, 6, 7, 2]
-        # kiki = list(set(kaka))
-        # print(kiki)
-        # for k in kiki:
-        #     kaka.remove(k)
-        # print(kaka)
-        # kaka = list(set(kaka))
-        # print(kaka)
-
-
-            # print(url_foto) #ссылка на максимальное фото для скачивания
-            # print(TYPE_TUPLES[size_max]) #ссылка на тип - нужно записать в файл
-            # print(res.json()['response']['items'][j]['likes']['count']) #число лайков
-            # print(res.json()['response']['items'][j]['date']) #дата создания
-
-
-    # else: #если профиль не приватный - ищем фото наилучшего качества - по длине и высоте не удалось найти фото до 2012 года
-    #     for j in range(len(res.json()['response']['items'])):
-    #         # определяю максимальное фото
-    #         size_max = 0
-    #         for i in range(len(res.json()['response']['items'][j]['sizes'])):
-    #             #pprint(res.json()['response']['items'][j]['sizes'][i])
-    #             size = res.json()['response']['items'][j]['sizes'][i]['height'] + res.json()['response']['items'][j]['sizes'][i]['width']
-    #             #print(size)
-    #             if size_max < size:
-    #                 size_max = size
-    #                 url_foto = res.json()['response']['items'][j]['sizes'][i]['url']
-    #                 type_img = res.json()['response']['items'][j]['sizes'][i]['type']
-    #         print(size_max) #строка проверки мксимального размера
-    #         print(url_foto) #ссылка на максимальное фото для скачивания
-    #         print(type_img) #ссылка на тип - нужно записать в файл
-    #         print(res.json()['response']['items'][j]['likes']['count']) #число лайков
-    #         print(res.json()['response']['items'][j]['date']) #дата создания
-
-        ##### Проблема до 2012 года у фото нет параметров длины и ширины, думаю нужно сделать перебор по списку значений Type по величине try и expect.
+        #загружаем json на Я-Диск
+        params = {
+            'path': f'/{dir_name}/{file_path}',
+            'overwrite': 'true'
+        }
+        response = requests.get(url, headers=headers, params=params, timeout=5)
+        dic = response.json()
+        response = requests.put(dic['href'], data=open(file_path, 'rb'), headers=headers, timeout=5)
+        print('Отслеживание процесса: Файл JSON записан на Я-Диск')
+        print('Отслеживание процесса: Задание выполнено')
