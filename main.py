@@ -2,6 +2,8 @@ import time
 import requests
 import json
 
+from yandex import Yandex
+
 if __name__ == '__main__':
 
     def get_token(token_file):
@@ -80,35 +82,13 @@ if __name__ == '__main__':
 
         # далее операции с Я-Диском
         token = get_token('tokenya.txt')
-        #создаем папку
         dir_name = input('Укажите название создаваемой папки: ')
-        url = "https://cloud-api.yandex.net/v1/disk/resources"
-        headers = {
-            'Accept': 'application/json',
-            'Authorization': f'OAuth {token}'
-        }
-        params = {'path': dir_name}
-
-        response = requests.put(url, headers=headers, params=params, timeout=5)
+        ya = Yandex(token)
+        ya.make_dir(dir_name) #создаем папку
         print('Отслеживание процесса: Папка на Я-Диске создана')
-
-        #загружаем файлы на Я-диск
-        url = "https://cloud-api.yandex.net/v1/disk/resources/upload"
-        for i, foto in enumerate(result):
-            params = {
-                'path': f'/{dir_name}/{foto["file_name"]}',
-                'url': foto['url']
-            }
-            response = requests.post(url, params=params, headers=headers, timeout=5)
+        for i, foto in enumerate(result):        #загружаем файлы на Я-диск
+            ya.upload_file_url(dir_name, foto["file_name"], foto['url'])
             print(f'Отслеживание процесса: загружено {i+1} фото из {len(result)}')
-
-        #загружаем json на Я-Диск
-        params = {
-            'path': f'/{dir_name}/{file_path}',
-            'overwrite': 'true'
-        }
-        response = requests.get(url, headers=headers, params=params, timeout=5)
-        dic = response.json()
-        response = requests.put(dic['href'], data=open(file_path, 'rb'), headers=headers, timeout=5)
+        ya.upload_file_path(dir_name, file_path) #загружаем json на Я-Диск
         print('Отслеживание процесса: Файл JSON записан на Я-Диск')
         print('Отслеживание процесса: Задание выполнено')
