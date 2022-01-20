@@ -1,8 +1,8 @@
 import time
-import requests
 import json
 
 from yandex import Yandex
+from vk import Vk
 
 if __name__ == '__main__':
 
@@ -12,19 +12,11 @@ if __name__ == '__main__':
             token = file_object.read().strip()
         return token
 
-    result = []
-    token = get_token('token.txt')
-    URL = 'https://api.vk.com/method/photos.get'
+    #работа с API VK
     id = input('Введите id изучаемой учетки Вконтакте (например Павла Дурова - 1): ')
-    params = {
-        'owner_id': id.strip(),
-        'album_id': 'profile',
-        'extended': True,
-        'photo_sizes': True,
-        'access_token': token,
-        'v': '5.131'
-    }
-    res = requests.get(URL, params=params)
+    token = get_token('token.txt')
+    vk = Vk(token)
+    res = vk.photos_get_profile(id)
     print('Отслеживание процесса: Данные от ID получены')
 
     error_test = res.json().get('error') # проверка на приватность
@@ -34,6 +26,7 @@ if __name__ == '__main__':
     else:
         print('Отслеживание процесса: Профиль не защищен настройками приватности - продолжаю')
         TYPE_TUPLES = ('w', 'z', 'y', 'x', 'r', 'q', 'p', 'o', 'm', 's') # определяем самые качественное фото по типу
+        result = []
         for j in range(len(res.json()['response']['items'])):
             size_max = 10
             for i in range(len(res.json()['response']['items'][j]['sizes'])):
