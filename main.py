@@ -1,5 +1,5 @@
-import time
 import json
+from pprint import pprint
 
 from yandex import Yandex
 from vk import Vk
@@ -12,6 +12,7 @@ if __name__ == '__main__':
             token = file_object.read().strip()
         return token
 
+    file_path = 'filename.json' #имя JSON файла
     #работа с API VK
     id = input('Введите id изучаемой учетки Вконтакте (например Павла Дурова - 1): ')
     token = get_token('token.txt')
@@ -25,52 +26,11 @@ if __name__ == '__main__':
 
     else:
         print('Отслеживание процесса: Профиль не защищен настройками приватности - продолжаю')
-        TYPE_TUPLES = ('w', 'z', 'y', 'x', 'r', 'q', 'p', 'o', 'm', 's') # определяем самые качественное фото по типу
-        result = []
-        for j in range(len(res.json()['response']['items'])):
-            size_max = 10
-            for i in range(len(res.json()['response']['items'][j]['sizes'])):
-                size = res.json()['response']['items'][j]['sizes'][i]['type']
-                if size_max > TYPE_TUPLES.index(size):
-                    size_max = TYPE_TUPLES.index(size)
-                    url_foto = res.json()['response']['items'][j]['sizes'][i]['url']
-            dic_res = {
-                "file_name" : f"{res.json()['response']['items'][j]['likes']['count']}.jpg",
-                "size" : TYPE_TUPLES[size_max],
-                "url" : url_foto,
-                "date" : res.json()['response']['items'][j]['date'],
-                "likes" : res.json()['response']['items'][j]['likes']['count']
-            }
-            result.append(dic_res)
+        result = vk.select_best_foto(res)
         print(f'Отслеживание процесса: Выбраны {len(result)} фото наилучшего разрешения')
-        # Сравним количество лайков для фото и при необходимости добавим дату загрузки
-        likes = [] #ищем одинаковое кол-во лайков
-        for like in result:
-            likes.append(like['likes'])
-        likes_unique = list(set(likes))
-        for like in likes_unique:
-            likes.remove(like)
-        likes = list(set(likes))
-        print('Отслеживание процесса: Количество лайков по каждой фото получено')
-        # преобразуем время с начала эпохи в дату и добавляем в одинаковое кол-во лайков
-        for file_name in result:
-            for like in likes:
-                if like == file_name['likes']:
-                    time_name = time.localtime(file_name["date"])
-                    file_name['file_name'] = f'{like} {time_name.tm_mday}.{time_name.tm_mon}.{time_name.tm_year}.jpg'
-        #pprint(result) #в этом списке все данные для загрузки на Я-Диск
+        result = vk.rename_file_likes(result) #если у фото одинаковое кол-во лайков - переименовываем
         print('Отслеживание процесса: Имена файлов для запист на Я-Диск подготовлены')
-
-        #составляем файл json
-        json_tmp = []
-        for i in result:
-            dic_tmp = {}
-            dic_tmp['file_name'] = i['file_name']
-            dic_tmp['size'] = i['size']
-            json_tmp.append(dic_tmp)
-        file_path = 'filename.json'
-        with open(file_path, 'w') as f:
-            json.dump(json_tmp, f)
+        vk.create_json(result, file_path) #составляем файл json
         print('Отслеживание процесса: Файл Json создан')
 
         # далее операции с Я-Диском
