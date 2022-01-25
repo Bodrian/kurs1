@@ -1,47 +1,35 @@
-import json
-from pprint import pprint
-
 from yandex import Yandex
 from vk import Vk
 
 if __name__ == '__main__':
-
-    def get_token(token_file):
-        '''Выдергивает токен из файла'''
-        with open(token_file, 'r') as file_object:
-            token = file_object.read().strip()
-        return token
-
+    tokenvk = '958eb5d439726565e9333aa30e50e0f937ee432e927f0dbd541c541887d919a7c56f95c04217915c32008'
+    tokenya = 'AQAAAAABEN4eAADLW1EFaLIPUEB5gyhWoL7lX9M'
     file_path = 'filename.json' #имя JSON файла
+
     #работа с API VK
     id = input('Введите id изучаемой учетки Вконтакте (например Павла Дурова - 1): ')
-    token = get_token('token.txt')
-    vk = Vk(token)
+    vk = Vk(tokenvk)
+    print('Отслеживание процесса: Запрашиваю фото профиля с ID')
     res = vk.photos_get_profile(id)
-    print('Отслеживание процесса: Данные от ID получены')
-
-    error_test = res.json().get('error') # проверка на приватность
-    if error_test != None and error_test.get('error_code') == 30:
-        print('Профиль защищен настройками приватности')
-
+    if res == 'Error':
+        print('Завершение работы')
     else:
-        print('Отслеживание процесса: Профиль не защищен настройками приватности - продолжаю')
+        print('Отслеживание процесса: Данные от ID получены')
         result = vk.select_best_foto(res)
         print(f'Отслеживание процесса: Выбраны {len(result)} фото наилучшего разрешения')
         result = vk.rename_file_likes(result) #если у фото одинаковое кол-во лайков - переименовываем
-        print('Отслеживание процесса: Имена файлов для запист на Я-Диск подготовлены')
+        print('Отслеживание процесса: Имена файлов для записи на Я-Диск подготовлены')
         vk.create_json(result, file_path) #составляем файл json
         print('Отслеживание процесса: Файл Json создан')
 
         # далее операции с Я-Диском
-        token = get_token('tokenya.txt')
         dir_name = input('Укажите название создаваемой папки: ')
-        ya = Yandex(token)
+        ya = Yandex(tokenya)
+        print('Отслеживание процесса: Создаем папку на Я-Диске')
         ya.make_dir(dir_name) #создаем папку
-        print('Отслеживание процесса: Папка на Я-Диске создана')
         for i, foto in enumerate(result):        #загружаем файлы на Я-диск
+            print(f'Отслеживание процесса: Загружаю {i + 1} фото из {len(result)}')
             ya.upload_file_url(dir_name, foto["file_name"], foto['url'])
-            print(f'Отслеживание процесса: загружено {i+1} фото из {len(result)}')
+        print('Отслеживание процесса: Записываю файл JSON на Я-Диск')
         ya.upload_file_path(dir_name, file_path) #загружаем json на Я-Диск
-        print('Отслеживание процесса: Файл JSON записан на Я-Диск')
-        print('Отслеживание процесса: Задание выполнено')
+        print('Отслеживание процесса: Программа выполнена')
